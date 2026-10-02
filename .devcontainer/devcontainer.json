@@ -5,7 +5,8 @@
   "portsAttributes": {
     "3000": {
       "label": "FuelRescue App",
-      "onAutoForward": "openBrowser"
+      "onAutoForward": "openBrowser",
+      "visibility": "public"
     }
   },
   "postCreateCommand": "npm install"
