@@ -1,0 +1,405 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default Deny: Close all unspecified paths by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Core Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isOptionalString(data, field, maxLen) {
+      return !(field in data) || data[field] == null || (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function isOptionalNumber(data, field, minVal, maxVal) {
+      return !(field in data) || data[field] == null || (data[field] is number && data[field] >= minVal && data[field] <= maxVal);
+    }
+
+    function isValidTimestampOrString(data, field) {
+      return (data[field] is string && data[field].size() <= 60) || data[field] is timestamp;
+    }
+
+    function isOptionalTimestampOrString(data, field) {
+      return !(field in data) || data[field] == null || (data[field] is string && data[field].size() <= 60) || data[field] is timestamp;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == 'ddk115070@gmail.com' ||
+        request.auth.token.role == 'ADMIN' ||
+        request.auth.token.admin == true ||
+        (request.auth.token.email != null && request.auth.token.email == 'admin@fuelrescue.com') ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          getUserData().role == 'ADMIN' &&
+          (getUserData().adminAccessApproved == true || getUserData().email == 'ddk115070@gmail.com')
+        )
+      );
+    }
+
+    function isPartner() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'DELIVERY_PARTNER' ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          getUserData().role == 'DELIVERY_PARTNER'
+        )
+      );
+    }
+
+    // ===============================================================
+    // Domain Validators (Enforced on create and update)
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['name', 'email', 'role', 'isActive', 'createdAt']) &&
+        hasOnlyAllowedFields(['id', 'name', 'email', 'phone', 'role', 'photoURL', 'createdAt', 'isActive', 'isMainAdmin', 'adminAccessApproved', 'adminApprovedBy', 'adminApprovedAt', 'updatedAt']) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.email is string && isValidEmail(data.email) && data.email.size() <= 150 &&
+        data.role in ['CUSTOMER', 'DELIVERY_PARTNER', 'ADMIN'] &&
+        data.isActive is bool &&
+        isValidTimestampOrString(data, 'createdAt') &&
+        isOptionalString(data, 'id', 128) &&
+        isOptionalString(data, 'phone', 25) &&
+        isOptionalString(data, 'photoURL', 500) &&
+        (!('isMainAdmin' in data) || data.isMainAdmin is bool) &&
+        (!('adminAccessApproved' in data) || data.adminAccessApproved is bool) &&
+        isOptionalString(data, 'adminApprovedBy', 150) &&
+        isOptionalTimestampOrString(data, 'adminApprovedAt') &&
+        isOptionalTimestampOrString(data, 'updatedAt');
+    }
+
+    function isValidPartner(data) {
+      return hasRequiredFields(['userId', 'name', 'vehicleType', 'vehicleNumber', 'latitude', 'longitude', 'serviceArea', 'availability', 'verificationStatus', 'rating', 'totalDeliveries', 'createdAt']) &&
+        hasOnlyAllowedFields(['id', 'userId', 'name', 'phone', 'email', 'vehicleType', 'vehicleNumber', 'latitude', 'longitude', 'serviceArea', 'availability', 'verificationStatus', 'rating', 'totalDeliveries', 'todayDeliveries', 'todayEarnings', 'totalEarnings', 'createdAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.vehicleType is string && data.vehicleType.size() <= 100 &&
+        data.vehicleNumber is string && data.vehicleNumber.size() <= 30 &&
+        data.latitude is number && data.latitude >= -90.0 && data.latitude <= 90.0 &&
+        data.longitude is number && data.longitude >= -180.0 && data.longitude <= 180.0 &&
+        data.serviceArea is string && data.serviceArea.size() <= 100 &&
+        data.availability in ['ONLINE', 'BUSY', 'OFFLINE'] &&
+        data.verificationStatus in ['PENDING', 'VERIFIED', 'REJECTED'] &&
+        data.rating is number && data.rating >= 0.0 && data.rating <= 5.0 &&
+        data.totalDeliveries is number && data.totalDeliveries >= 0 &&
+        isValidTimestampOrString(data, 'createdAt') &&
+        isOptionalString(data, 'id', 128) &&
+        isOptionalString(data, 'phone', 25) &&
+        isOptionalString(data, 'email', 150) &&
+        isOptionalNumber(data, 'todayDeliveries', 0, 100000) &&
+        isOptionalNumber(data, 'todayEarnings', 0, 10000000) &&
+        isOptionalNumber(data, 'totalEarnings', 0, 100000000);
+    }
+
+    function isValidFuelRequest(data) {
+      return hasRequiredFields(['userId', 'customerName', 'fuelType', 'quantity', 'vehicleType', 'latitude', 'longitude', 'address', 'totalAmount', 'status', 'createdAt']) &&
+        hasOnlyAllowedFields([
+          'id', 'userId', 'customerName', 'customerPhone', 'fuelType', 'quantity',
+          'vehicleType', 'latitude', 'longitude', 'address', 'message', 'pricePerLitre',
+          'subtotal', 'baseDeliveryFee', 'deliveryFeePerKm', 'deliveryFee',
+          'emergencySurge', 'totalAmount', 'status', 'createdAt',
+          'acceptedAt', 'completedAt', 'partnerId', 'partnerName', 'partnerPhone',
+          'partnerVehicle', 'partnerLat', 'partnerLng', 'distanceKm',
+          'estimatedTimeMinutes', 'dispatchMessage', 'deliveryOtp'
+        ]) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 100 &&
+        data.fuelType in ['Petrol', 'Diesel'] &&
+        data.quantity is number && data.quantity > 0.0 && data.quantity <= 50.0 &&
+        data.vehicleType is string && data.vehicleType.size() <= 100 &&
+        data.latitude is number && data.latitude >= -90.0 && data.latitude <= 90.0 &&
+        data.longitude is number && data.longitude >= -180.0 && data.longitude <= 180.0 &&
+        data.address is string && data.address.size() > 0 && data.address.size() <= 500 &&
+        data.totalAmount is number && data.totalAmount >= 0.0 &&
+        data.status in ['PENDING', 'ASSIGNED', 'ACCEPTED', 'ON_THE_WAY', 'ARRIVED', 'COMPLETED', 'CANCELLED'] &&
+        isValidTimestampOrString(data, 'createdAt') &&
+        isOptionalString(data, 'id', 128) &&
+        isOptionalString(data, 'customerPhone', 25) &&
+        isOptionalString(data, 'message', 500) &&
+        isOptionalString(data, 'deliveryOtp', 10) &&
+        isOptionalNumber(data, 'pricePerLitre', 0, 10000) &&
+        isOptionalNumber(data, 'subtotal', 0, 100000) &&
+        isOptionalNumber(data, 'baseDeliveryFee', 0, 100000) &&
+        isOptionalNumber(data, 'deliveryFeePerKm', 0, 100000) &&
+        isOptionalNumber(data, 'deliveryFee', 0, 100000) &&
+        isOptionalNumber(data, 'emergencySurge', 0, 100000) &&
+        isOptionalString(data, 'partnerId', 128) &&
+        isOptionalString(data, 'partnerName', 100) &&
+        isOptionalString(data, 'partnerPhone', 25) &&
+        isOptionalString(data, 'partnerVehicle', 100) &&
+        isOptionalNumber(data, 'partnerLat', -90.0, 90.0) &&
+        isOptionalNumber(data, 'partnerLng', -180.0, 180.0) &&
+        isOptionalNumber(data, 'distanceKm', 0, 10000) &&
+        isOptionalNumber(data, 'estimatedTimeMinutes', 0, 10000) &&
+        isOptionalString(data, 'dispatchMessage', 500) &&
+        isOptionalTimestampOrString(data, 'acceptedAt') &&
+        isOptionalTimestampOrString(data, 'completedAt');
+    }
+
+    function isValidOrder(data) {
+      return hasRequiredFields(['requestId', 'userId', 'amount', 'paymentMethod', 'paymentStatus', 'transactionId', 'createdAt']) &&
+        hasOnlyAllowedFields(['id', 'requestId', 'userId', 'partnerId', 'amount', 'paymentMethod', 'paymentStatus', 'transactionId', 'gateway', 'createdAt', 'meta', 'refundId', 'refundedAt']) &&
+        data.requestId is string && data.requestId.size() <= 128 &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.amount is number && data.amount >= 0.0 &&
+        data.paymentMethod in ['DEMO_UPI', 'DEMO_CARD', 'CASH_DEMO', 'UPI', 'CARD', 'CASH'] &&
+        data.paymentStatus in ['PENDING', 'PAID', 'FAILED', 'REFUNDED'] &&
+        data.transactionId is string && data.transactionId.size() <= 128 &&
+        isValidTimestampOrString(data, 'createdAt') &&
+        isOptionalString(data, 'id', 128) &&
+        isOptionalString(data, 'partnerId', 128) &&
+        isOptionalString(data, 'gateway', 200) &&
+        isOptionalString(data, 'refundId', 128) &&
+        isOptionalTimestampOrString(data, 'refundedAt') &&
+        (!('meta' in data) || data.meta is map);
+    }
+
+    function isValidReview(data) {
+      return hasRequiredFields(['requestId', 'userId', 'partnerId', 'rating', 'comment', 'createdAt']) &&
+        hasOnlyAllowedFields(['id', 'requestId', 'userId', 'userName', 'partnerId', 'partnerName', 'rating', 'comment', 'createdAt']) &&
+        data.requestId is string && data.requestId.size() <= 128 &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.partnerId is string && data.partnerId.size() <= 128 &&
+        data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+        data.comment is string && data.comment.size() > 0 && data.comment.size() <= 1000 &&
+        isValidTimestampOrString(data, 'createdAt') &&
+        isOptionalString(data, 'id', 128) &&
+        isOptionalString(data, 'userName', 100) &&
+        isOptionalString(data, 'partnerName', 100);
+    }
+
+    function isValidServiceArea(data) {
+      return hasRequiredFields(['name', 'city', 'latitude', 'longitude', 'radiusKm', 'baseDeliveryFee', 'petrolPricePerLitre', 'dieselPricePerLitre', 'status']) &&
+        hasOnlyAllowedFields(['id', 'name', 'city', 'latitude', 'longitude', 'radiusKm', 'baseDeliveryFee', 'petrolPricePerLitre', 'dieselPricePerLitre', 'activePartnersCount', 'status']) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.city is string && data.city.size() > 0 && data.city.size() <= 100 &&
+        data.latitude is number && data.latitude >= -90.0 && data.latitude <= 90.0 &&
+        data.longitude is number && data.longitude >= -180.0 && data.longitude <= 180.0 &&
+        data.radiusKm is number && data.radiusKm > 0.0 &&
+        data.baseDeliveryFee is number && data.baseDeliveryFee >= 0.0 &&
+        data.petrolPricePerLitre is number && data.petrolPricePerLitre > 0.0 &&
+        data.dieselPricePerLitre is number && data.dieselPricePerLitre > 0.0 &&
+        data.status in ['ACTIVE', 'INACTIVE', 'EXPANDING'] &&
+        isOptionalString(data, 'id', 128) &&
+        isOptionalNumber(data, 'activePartnersCount', 0, 10000);
+    }
+
+    function isValidNotification(data) {
+      return hasRequiredFields(['userId', 'title', 'message', 'read']) &&
+        hasOnlyAllowedFields(['id', 'userId', 'title', 'message', 'type', 'read', 'time', 'createdAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+        data.message is string && data.message.size() > 0 && data.message.size() <= 500 &&
+        data.read is bool &&
+        isOptionalString(data, 'id', 128) &&
+        isOptionalString(data, 'type', 50) &&
+        isOptionalString(data, 'time', 50) &&
+        isOptionalTimestampOrString(data, 'createdAt');
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // 1. Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (
+        (isAdmin() && request.resource.data.role in ['CUSTOMER', 'DELIVERY_PARTNER', 'ADMIN']) ||
+        (
+          isOwner(userId) && (
+            (request.auth.token.email == 'ddk115070@gmail.com' && request.resource.data.role == 'ADMIN') ||
+            request.resource.data.role in ['CUSTOMER', 'DELIVERY_PARTNER']
+          ) &&
+          request.resource.data.isActive == true
+        )
+      );
+
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (
+        (
+          isAdmin() &&
+          // Root Main Administrator permissions and active state cannot be removed
+          (resource.data.email != 'ddk115070@gmail.com' || (request.resource.data.role == 'ADMIN' && request.resource.data.isActive == true))
+        ) || (
+          isOwner(userId) &&
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.isActive == resource.data.isActive &&
+          areImmutableFieldsUnchanged(['id', 'email', 'createdAt', 'isMainAdmin', 'adminAccessApproved'])
+        )
+      );
+
+      allow delete: if isAdmin() && resource.data.email != 'ddk115070@gmail.com';
+    }
+
+    // 2. Partners Collection
+    match /partners/{partnerId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated() && isValidPartner(request.resource.data) && (
+        isAdmin() || (
+          isOwner(request.resource.data.userId) &&
+          request.resource.data.verificationStatus == 'PENDING' &&
+          request.resource.data.rating == 5.0 &&
+          request.resource.data.totalDeliveries == 0
+        )
+      );
+
+      allow update: if isAuthenticated() && isValidPartner(request.resource.data) && (
+        isAdmin() || (
+          resource.data.userId == request.auth.uid &&
+          areImmutableFieldsUnchanged(['id', 'userId', 'verificationStatus', 'rating', 'totalDeliveries', 'createdAt'])
+        )
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // 3. Fuel Requests Collection
+    match /fuelRequests/{requestId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.partnerId == request.auth.uid ||
+        isPartner() ||
+        isAdmin()
+      );
+
+      allow create: if isAuthenticated() && isValidFuelRequest(request.resource.data) && (
+        isAdmin() || (
+          request.resource.data.userId == request.auth.uid &&
+          request.resource.data.status in ['PENDING', 'ASSIGNED']
+        )
+      );
+
+      allow update: if isAuthenticated() && isValidFuelRequest(request.resource.data) && (
+        isAdmin() || (
+          areImmutableFieldsUnchanged(['id', 'userId', 'fuelType', 'quantity', 'totalAmount', 'createdAt']) && (
+            (
+              resource.data.userId == request.auth.uid && (
+                (request.resource.data.status == 'CANCELLED' && resource.data.status in ['PENDING', 'ASSIGNED']) ||
+                (request.resource.data.status in ['PENDING', 'ASSIGNED'] && resource.data.status in ['PENDING', 'ASSIGNED'])
+              )
+            ) ||
+            (
+              isPartner() && (
+                (resource.data.status in ['PENDING', 'ASSIGNED'] && request.resource.data.status == 'ACCEPTED' && request.resource.data.partnerId == request.auth.uid) ||
+                (resource.data.partnerId == request.auth.uid && request.resource.data.status in ['PENDING', 'ASSIGNED']) ||
+                (
+                  resource.data.partnerId == request.auth.uid &&
+                  request.resource.data.partnerId == resource.data.partnerId && (
+                    (resource.data.status == 'ACCEPTED' && request.resource.data.status in ['ACCEPTED', 'ON_THE_WAY']) ||
+                    (resource.data.status == 'ON_THE_WAY' && request.resource.data.status in ['ON_THE_WAY', 'ARRIVED']) ||
+                    (resource.data.status == 'ARRIVED' && request.resource.data.status in ['ARRIVED', 'COMPLETED'])
+                  )
+                )
+              )
+            )
+          )
+        )
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // 4. Orders Collection
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.partnerId == request.auth.uid ||
+        isAdmin()
+      );
+
+      allow create: if isAuthenticated() && isValidOrder(request.resource.data) && (
+        isAdmin() || (
+          request.resource.data.userId == request.auth.uid
+        )
+      );
+
+      allow update: if isAuthenticated() && isValidOrder(request.resource.data) && (
+        isAdmin() || (
+          (resource.data.userId == request.auth.uid || resource.data.partnerId == request.auth.uid) &&
+          areImmutableFieldsUnchanged(['id', 'userId', 'requestId', 'amount', 'createdAt'])
+        )
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // 5. Reviews Collection
+    match /reviews/{reviewId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated() && isValidReview(request.resource.data) && (
+        isAdmin() || request.resource.data.userId == request.auth.uid
+      );
+
+      allow update, delete: if isAdmin();
+    }
+
+    // 6. Service Areas Collection
+    match /serviceAreas/{areaId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidServiceArea(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // 7. Notifications Collection
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+
+      allow create: if isAuthenticated() && isValidNotification(request.resource.data);
+
+      allow update: if isAuthenticated() && isValidNotification(request.resource.data) && (
+        isAdmin() || (
+          isOwner(resource.data.userId) &&
+          areImmutableFieldsUnchanged(['id', 'userId', 'title', 'message', 'type', 'createdAt'])
+        )
+      );
+
+      allow delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+    }
+
+    // 8. Platform Settings & Pricing Collection
+    match /platformSettings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
