@@ -94,6 +94,49 @@ export async function reverseGeocodeCoords(lat, lng) {
       console.warn("Google Geocoding API lookup failed:", e);
     }
   }
+
+  // OpenStreetMap Nominatim Reverse Geocode (free, accurate, street-level)
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+      headers: {
+        'Accept-Language': 'en'
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.display_name) {
+        return data.display_name;
+      }
+    }
+  } catch (e) {
+    console.warn("Nominatim reverse geocode error:", e);
+  }
+
   // Descriptive fallback location string
-  return `Emergency Coordinates: [${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E]`;
+  return `GPS Coords: [${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E]`;
+}
+
+/**
+ * Search locations via OpenStreetMap Nominatim
+ */
+export async function searchAddressOSM(query) {
+  if (!query || query.trim().length < 2) return [];
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`, {
+      headers: {
+        'Accept-Language': 'en'
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.map(item => ({
+        display_name: item.display_name,
+        lat: parseFloat(item.lat),
+        lng: parseFloat(item.lon)
+      }));
+    }
+  } catch (err) {
+    console.warn("Nominatim search error:", err);
+  }
+  return [];
 }
