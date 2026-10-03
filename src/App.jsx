@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // Providers
+import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { EmergencyRequestProvider } from './context/EmergencyRequestContext';
@@ -43,11 +44,12 @@ import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 export default function App() {
   return (
     <Router>
-      <AuthProvider>
-        <NotificationProvider>
-          <EmergencyRequestProvider>
-            <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-brand-500 selection:text-white">
-              <Navbar />
+      <ThemeProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <EmergencyRequestProvider>
+              <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-brand-500 selection:text-white transition-colors duration-200">
+                <Navbar />
 
               <main className="flex-1">
                 <ErrorBoundary>
@@ -197,6 +199,7 @@ export default function App() {
           </EmergencyRequestProvider>
         </NotificationProvider>
       </AuthProvider>
+      </ThemeProvider>
     </Router>
   );
 }

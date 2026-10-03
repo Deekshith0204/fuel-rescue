@@ -1,19 +1,19 @@
 import React from 'react';
-import { MapPin, CheckCircle, Navigation, Shield, Compass } from 'lucide-react';
+import { Compass } from 'lucide-react';
 import { SAMPLE_SERVICE_AREAS } from '../../firebase/seedData';
 
 export default function ServiceAreasSection() {
   return (
-    <section className="py-20 bg-slate-950 border-t border-slate-800">
+    <section className="py-20 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-          <span className="text-xs font-bold text-amber-400 uppercase tracking-widest px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+          <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
             Geofenced Zones
           </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white font-['Plus_Jakarta_Sans']">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white font-['Plus_Jakarta_Sans']">
             Current Emergency Coverage Corridors
           </h2>
-          <p className="text-slate-400 text-sm sm:text-base">
+          <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base leading-relaxed">
             Actively mapped high-density highway corridors and metropolitan tech sectors with rapid partner response.
           </p>
         </div>
@@ -22,34 +22,34 @@ export default function ServiceAreasSection() {
           {SAMPLE_SERVICE_AREAS.map((area) => (
             <div 
               key={area.id}
-              className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 hover:border-brand-500/50 transition duration-300 relative group overflow-hidden shadow-xl"
+              className="p-6 rounded-3xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 hover:border-brand-500/50 transition duration-300 relative group overflow-hidden shadow-sm hover:shadow-md"
             >
               <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-400">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 border border-brand-200 dark:border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400">
                   <Compass className="w-5 h-5" />
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold">
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 dark:text-emerald-400 text-[11px] font-bold">
                   {area.status}
                 </span>
               </div>
 
-              <h3 className="text-lg font-bold text-white mb-1 group-hover:text-brand-400 transition">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition">
                 {area.name}
               </h3>
-              <p className="text-xs text-slate-400 mb-4">{area.city} Region</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{area.city} Region</p>
 
-              <div className="space-y-2 pt-3 border-t border-slate-800 text-xs">
-                <div className="flex justify-between text-slate-400">
+              <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+                <div className="flex justify-between text-slate-600 dark:text-slate-400">
                   <span>Coverage Perimeter:</span>
-                  <span className="text-slate-200 font-semibold">{area.radiusKm} km Radius</span>
+                  <span className="text-slate-900 dark:text-slate-200 font-bold">{area.radiusKm} km Radius</span>
                 </div>
-                <div className="flex justify-between text-slate-400">
+                <div className="flex justify-between text-slate-600 dark:text-slate-400">
                   <span>Base Rapid Dispatch:</span>
-                  <span className="text-slate-200 font-semibold">₹{area.baseDeliveryFee.toFixed(2)}</span>
+                  <span className="text-slate-900 dark:text-slate-200 font-bold">₹{area.baseDeliveryFee.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-slate-400">
+                <div className="flex justify-between text-slate-600 dark:text-slate-400">
                   <span>Standby Responders:</span>
-                  <span className="text-emerald-400 font-semibold">{area.activePartnersCount} Active Units</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">{area.activePartnersCount} Active Units</span>
                 </div>
               </div>
             </div>

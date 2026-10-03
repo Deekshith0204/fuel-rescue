@@ -3,27 +3,47 @@
 @tailwind utilities;
 
 @layer base {
+  /* Default Light Theme */
   body {
-    @apply bg-slate-950 text-slate-100 font-sans min-h-screen;
+    @apply bg-slate-50 text-slate-900 font-sans min-h-screen transition-colors duration-200;
     background-image: 
-      radial-gradient(at 0% 0%, rgba(249, 115, 22, 0.08) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(30, 58, 138, 0.08) 0px, transparent 50%);
+      radial-gradient(at 0% 0%, rgba(249, 115, 22, 0.05) 0px, transparent 45%),
+      radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.04) 0px, transparent 45%);
     background-attachment: fixed;
   }
 
-  /* Custom smooth scrollbar */
+  /* Dark Theme when .dark class is on html */
+  html.dark body {
+    @apply bg-slate-950 text-slate-100;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(249, 115, 22, 0.08) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(30, 58, 138, 0.08) 0px, transparent 50%);
+  }
+
+  /* Custom smooth scrollbar in Light Mode */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: #090d16;
+    background: #f1f5f9;
   }
   ::-webkit-scrollbar-thumb {
-    background: #1e293b;
+    background: #cbd5e1;
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* Custom scrollbar in Dark Mode */
+  html.dark ::-webkit-scrollbar-track {
+    background: #090d16;
+  }
+  html.dark ::-webkit-scrollbar-thumb {
+    background: #1e293b;
+  }
+  html.dark ::-webkit-scrollbar-thumb:hover {
     background: #334155;
   }
 }
@@ -47,16 +67,217 @@
   animation: pulse-ring 2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
+/* Glass panels in Light Mode */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.75);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04);
 }
 
 .glass-card {
-  background: rgba(30, 41, 59, 0.6);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+}
+
+/* Glass panels in Dark Mode */
+html.dark .glass-panel {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+html.dark .glass-card {
+  background: rgba(30, 41, 59, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ========================================================================= */
+/* Comprehensive Light Mode Aesthetic Overrides (User-Friendly Light Theme)  */
+/* ========================================================================= */
+html:not(.dark) {
+  color-scheme: light;
+}
+
+/* Background surfaces */
+html:not(.dark) .bg-slate-950 {
+  background-color: #f8fafc !important;
+}
+html:not(.dark) .bg-slate-950\/60,
+html:not(.dark) .bg-slate-950\/70,
+html:not(.dark) .bg-slate-950\/80,
+html:not(.dark) .bg-slate-950\/90 {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .bg-slate-900 {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+}
+html:not(.dark) .bg-slate-900\/95,
+html:not(.dark) .bg-slate-900\/90,
+html:not(.dark) .bg-slate-900\/80,
+html:not(.dark) .bg-slate-900\/70,
+html:not(.dark) .bg-slate-900\/60,
+html:not(.dark) .bg-slate-900\/50,
+html:not(.dark) .bg-slate-900\/40 {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .bg-slate-800 {
+  background-color: #f1f5f9 !important;
+}
+html:not(.dark) .bg-slate-800\/90,
+html:not(.dark) .bg-slate-800\/80,
+html:not(.dark) .bg-slate-800\/70,
+html:not(.dark) .bg-slate-800\/60,
+html:not(.dark) .bg-slate-800\/50,
+html:not(.dark) .bg-slate-800\/40 {
+  background-color: #f8fafc !important;
+}
+
+/* Borders & Dividers */
+html:not(.dark) .border-slate-800,
+html:not(.dark) .border-slate-800\/90,
+html:not(.dark) .border-slate-800\/80,
+html:not(.dark) .border-slate-800\/60,
+html:not(.dark) .border-slate-800\/50,
+html:not(.dark) .border-slate-800\/40 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .border-slate-700,
+html:not(.dark) .border-slate-700\/90,
+html:not(.dark) .border-slate-700\/80,
+html:not(.dark) .border-slate-700\/60,
+html:not(.dark) .border-slate-700\/50 {
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #f1f5f9 !important;
+}
+html:not(.dark) .divide-slate-700 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+/* Modal Backdrops */
+html:not(.dark) .fixed.inset-0.bg-slate-950\/85,
+html:not(.dark) .fixed.inset-0.bg-slate-950\/80,
+html:not(.dark) .fixed.inset-0.bg-slate-950\/90 {
+  background-color: rgba(15, 23, 42, 0.45) !important;
+}
+
+/* Readable Slate Text */
+html:not(.dark) .text-slate-400 {
+  color: #64748b !important;
+}
+html:not(.dark) .text-slate-300 {
+  color: #475569 !important;
+}
+html:not(.dark) .text-slate-200 {
+  color: #1e293b !important;
+}
+html:not(.dark) .text-slate-100 {
+  color: #0f172a !important;
+}
+
+/* High Contrast Accent Colors in Light Mode */
+html:not(.dark) .text-brand-400 {
+  color: #ea580c !important; /* brand-600 for sharp readability */
+}
+html:not(.dark) .text-brand-300 {
+  color: #c2410c !important; /* brand-700 */
+}
+html:not(.dark) .text-emerald-400 {
+  color: #059669 !important; /* emerald-600 */
+}
+html:not(.dark) .text-amber-400 {
+  color: #d97706 !important; /* amber-600 */
+}
+html:not(.dark) .text-blue-400 {
+  color: #2563eb !important; /* blue-600 */
+}
+html:not(.dark) .text-rose-400 {
+  color: #e11d48 !important; /* rose-600 */
+}
+html:not(.dark) .text-purple-400 {
+  color: #9333ea !important; /* purple-600 */
+}
+
+/* Headings in Light Mode */
+html:not(.dark) h1.text-white,
+html:not(.dark) h2.text-white,
+html:not(.dark) h3.text-white,
+html:not(.dark) h4.text-white,
+html:not(.dark) h5.text-white,
+html:not(.dark) h6.text-white {
+  color: #0f172a !important;
+}
+
+/* Paragraphs and span text */
+html:not(.dark) p.text-white,
+html:not(.dark) span.text-white:not([class*="bg-brand"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-blue"]):not([class*="bg-purple"]):not([class*="from-brand"]) {
+  color: #0f172a !important;
+}
+
+/* Keep white text vibrant on colored buttons and badges */
+html:not(.dark) [class*="bg-brand-"] .text-white,
+html:not(.dark) [class*="bg-emerald-"] .text-white,
+html:not(.dark) [class*="bg-rose-"] .text-white,
+html:not(.dark) [class*="bg-blue-"] .text-white,
+html:not(.dark) [class*="bg-purple-"] .text-white,
+html:not(.dark) [class*="from-brand-"] .text-white,
+html:not(.dark) button.text-white,
+html:not(.dark) a.text-white[class*="bg-brand-"],
+html:not(.dark) a.text-white[class*="from-brand-"] {
+  color: #ffffff !important;
+}
+
+/* Form Controls in Light Mode */
+html:not(.dark) input:not([type="checkbox"]):not([type="radio"]),
+html:not(.dark) select,
+html:not(.dark) textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html:not(.dark) input:focus,
+html:not(.dark) select:focus,
+html:not(.dark) textarea:focus {
+  border-color: #f97316 !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15) !important;
+}
+
+/* Table styling in Light Mode */
+html:not(.dark) table thead tr {
+  background-color: #f8fafc !important;
+}
+html:not(.dark) table thead th {
+  color: #475569 !important;
+}
+html:not(.dark) table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Hover States */
+html:not(.dark) .hover\:bg-slate-800:hover,
+html:not(.dark) .hover\:bg-slate-800\/40:hover,
+html:not(.dark) .hover\:bg-slate-800\/60:hover,
+html:not(.dark) .hover\:bg-slate-800\/80:hover,
+html:not(.dark) .hover\:bg-slate-700:hover {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .hover\:text-white:hover {
+  color: #0f172a !important;
 }

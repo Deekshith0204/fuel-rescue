@@ -5,9 +5,7 @@ import {
   ShieldCheck, 
   Clock, 
   CreditCard, 
-  Smartphone, 
-  Users, 
-  FileText 
+  Smartphone 
 } from 'lucide-react';
 
 const FEATURES = [
@@ -45,16 +43,16 @@ const FEATURES = [
 
 export default function FeaturesSection() {
   return (
-    <section className="py-20 bg-slate-950 border-t border-slate-800/60">
+    <section className="py-20 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800/60 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-          <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20">
             Enterprise Grade Tech
           </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white font-['Plus_Jakarta_Sans']">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white font-['Plus_Jakarta_Sans']">
             Engineered for High-Pressure Roadside Emergencies
           </h2>
-          <p className="text-slate-400 text-sm sm:text-base">
+          <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base leading-relaxed">
             Combining reactive frontend state with Cloud Firestore real-time synchronization and Google Maps navigation.
           </p>
         </div>
@@ -65,15 +63,15 @@ export default function FeaturesSection() {
             return (
               <div 
                 key={feat.title}
-                className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800 hover:border-brand-500/40 transition duration-300 group hover:shadow-glow/20"
+                className="p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-brand-500/40 transition duration-300 group shadow-sm hover:shadow-md"
               >
-                <div className="w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center mb-5 group-hover:bg-brand-500 group-hover:text-white transition">
+                <div className="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-500/10 border border-brand-200 dark:border-brand-500/20 text-brand-600 dark:text-brand-400 flex items-center justify-center mb-5 group-hover:bg-brand-500 group-hover:text-white transition">
                   <Icon className="w-6 h-6" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-2 group-hover:text-brand-300 transition">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 group-hover:text-brand-600 dark:group-hover:text-brand-300 transition">
                   {feat.title}
                 </h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                   {feat.desc}
                 </p>
               </div>

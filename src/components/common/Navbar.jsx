@@ -15,16 +15,20 @@ import {
   LayoutDashboard, 
   History, 
   HelpCircle,
-  Settings
+  Settings,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useEmergencyRequest } from '../../context/EmergencyRequestContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function Navbar() {
   const { currentUser, logout } = useAuth();
   const { inbox, markAllRead } = useNotifications();
   const { activeRequest } = useEmergencyRequest();
+  const { theme, toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -41,7 +45,7 @@ export default function Navbar() {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+    <nav className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo */}
@@ -51,10 +55,10 @@ export default function Navbar() {
                 <Fuel className="w-6 h-6 text-white" />
               </div>
               <div>
-                <span className="font-extrabold text-xl tracking-tight text-white flex items-center gap-1 font-['Plus_Jakarta_Sans']">
+                <span className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white flex items-center gap-1 font-['Plus_Jakarta_Sans']">
                   Fuel<span className="text-brand-500">Rescue</span>
                 </span>
-                <span className="block text-[10px] text-slate-400 -mt-1 tracking-wider uppercase font-semibold">
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400 -mt-1 tracking-wider uppercase font-semibold">
                   Roadside Emergency
                 </span>
               </div>
@@ -74,7 +78,7 @@ export default function Navbar() {
                 <Link
                   to="/customer"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    isActive('/customer') ? 'bg-slate-800 text-brand-400' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    isActive('/customer') ? 'bg-orange-500/10 dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   Dashboard
@@ -84,7 +88,7 @@ export default function Navbar() {
                   className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition ${
                     isActive('/customer/emergency') 
                       ? 'bg-brand-500 text-white shadow-glow' 
-                      : 'bg-brand-500/20 text-brand-400 border border-brand-500/40 hover:bg-brand-500 hover:text-white'
+                      : 'bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/30 hover:bg-brand-500 hover:text-white'
                   }`}
                 >
                   <ShieldAlert className="w-4 h-4" />
@@ -93,7 +97,7 @@ export default function Navbar() {
                 {activeRequest && (
                   <Link
                     to="/customer/tracking"
-                    className="relative px-3 py-2 rounded-lg text-sm font-medium text-amber-400 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition flex items-center gap-1.5"
+                    className="relative px-3 py-2 rounded-lg text-sm font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition flex items-center gap-1.5"
                   >
                     <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
                     Live Tracking
@@ -102,7 +106,7 @@ export default function Navbar() {
                 <Link
                   to="/customer/orders"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    isActive('/customer/orders') ? 'bg-slate-800 text-brand-400' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    isActive('/customer/orders') ? 'bg-orange-500/10 dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   Orders
@@ -110,7 +114,7 @@ export default function Navbar() {
                 <Link
                   to="/customer/help"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    isActive('/customer/help') ? 'bg-slate-800 text-brand-400' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    isActive('/customer/help') ? 'bg-orange-500/10 dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   Help
@@ -123,7 +127,7 @@ export default function Navbar() {
                 <Link
                   to="/partner"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    isActive('/partner') ? 'bg-slate-800 text-brand-400' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    isActive('/partner') ? 'bg-orange-500/10 dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   Partner Dashboard
@@ -131,7 +135,7 @@ export default function Navbar() {
                 <Link
                   to="/partner/active"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    isActive('/partner/active') ? 'bg-slate-800 text-brand-400' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    isActive('/partner/active') ? 'bg-orange-500/10 dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   Active Delivery
@@ -139,7 +143,7 @@ export default function Navbar() {
                 <Link
                   to="/partner/history"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    isActive('/partner/history') ? 'bg-slate-800 text-brand-400' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    isActive('/partner/history') ? 'bg-orange-500/10 dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   Deliveries & Earnings
@@ -152,7 +156,7 @@ export default function Navbar() {
                 <Link
                   to="/admin"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    isActive('/admin') ? 'bg-slate-800 text-brand-400' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    isActive('/admin') ? 'bg-orange-500/10 dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   Admin Analytics
@@ -160,7 +164,7 @@ export default function Navbar() {
                 <Link
                   to="/admin/users"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    isActive('/admin/users') ? 'bg-slate-800 text-brand-400' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    isActive('/admin/users') ? 'bg-orange-500/10 dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   Users
@@ -168,7 +172,7 @@ export default function Navbar() {
                 <Link
                   to="/admin/partners"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    isActive('/admin/partners') ? 'bg-slate-800 text-brand-400' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    isActive('/admin/partners') ? 'bg-orange-500/10 dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   Partners
@@ -176,7 +180,7 @@ export default function Navbar() {
                 <Link
                   to="/admin/requests"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    isActive('/admin/requests') ? 'bg-slate-800 text-brand-400' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    isActive('/admin/requests') ? 'bg-orange-500/10 dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   Fuel Requests
@@ -184,7 +188,7 @@ export default function Navbar() {
                 <Link
                   to="/admin/settings"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    isActive('/admin/settings') ? 'bg-slate-800 text-brand-400' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    isActive('/admin/settings') ? 'bg-orange-500/10 dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   Settings
@@ -268,19 +272,33 @@ export default function Navbar() {
               )}
             </div>
 
+            {/* Theme Toggle Button (Light/Dark mode) */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-brand-500 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition border border-slate-200 dark:border-slate-700/60 flex items-center justify-center shadow-xs"
+              title={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
+              aria-label="Toggle Theme"
+            >
+              {isDark ? (
+                <Sun className="w-5 h-5 text-amber-400 hover:rotate-45 transition-transform" />
+              ) : (
+                <Moon className="w-5 h-5 text-slate-700 hover:-rotate-12 transition-transform" />
+              )}
+            </button>
+
             {/* User Profile / Logout */}
             {currentUser ? (
               <div className="flex items-center gap-1 sm:gap-2">
                 <Link
                   to="/profile"
-                  className="p-2 text-slate-400 hover:text-brand-400 hover:bg-slate-800 rounded-lg transition"
+                  className="p-2 text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
                   title="My Profile & Garage"
                 >
                   <User className="w-5 h-5" />
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
+                  className="p-2 text-slate-600 dark:text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
                   title="Sign Out"
                 >
                   <LogOut className="w-5 h-5" />
@@ -299,7 +317,7 @@ export default function Navbar() {
             <div className="flex md:hidden">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
               >
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -310,12 +328,29 @@ export default function Navbar() {
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-slate-800 bg-slate-900 px-4 pt-2 pb-4 space-y-2">
+        <div className="md:hidden border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 pt-2 pb-4 space-y-2 shadow-lg">
+          {/* Mobile Theme Toggle Button */}
+          <button
+            onClick={() => {
+              toggleTheme();
+              setMobileMenuOpen(false);
+            }}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 mb-2 transition"
+          >
+            <span className="flex items-center gap-2">
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
+              <span>{isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}</span>
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold">
+              {isDark ? "Dark Active" : "Light Active"}
+            </span>
+          </button>
+
           {currentUser && (
             <Link
               to="/profile"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-semibold text-brand-400 bg-brand-500/10 border border-brand-500/20 hover:bg-brand-500/20 transition mb-2"
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-semibold text-brand-500 dark:text-brand-400 bg-brand-500/10 border border-brand-500/20 hover:bg-brand-500/20 transition mb-2"
             >
               <User className="w-4 h-4" />
               <span>My Profile & Garage</span>
@@ -323,26 +358,26 @@ export default function Navbar() {
           )}
           {currentUser?.role === 'CUSTOMER' && (
             <>
-              <Link to="/customer" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800">Customer Dashboard</Link>
-              <Link to="/customer/emergency" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm font-semibold text-brand-400 bg-brand-500/10">Request Emergency Fuel</Link>
-              <Link to="/customer/orders" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800">Orders</Link>
-              <Link to="/customer/help" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800">Help & Support</Link>
+              <Link to="/customer" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Customer Dashboard</Link>
+              <Link to="/customer/emergency" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm font-semibold text-brand-500 dark:text-brand-400 bg-brand-500/10">Request Emergency Fuel</Link>
+              <Link to="/customer/orders" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Orders</Link>
+              <Link to="/customer/help" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Help & Support</Link>
             </>
           )}
           {currentUser?.role === 'DELIVERY_PARTNER' && (
             <>
-              <Link to="/partner" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800">Partner Dashboard</Link>
-              <Link to="/partner/active" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800">Active Delivery</Link>
-              <Link to="/partner/history" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800">Deliveries & Earnings</Link>
+              <Link to="/partner" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Partner Dashboard</Link>
+              <Link to="/partner/active" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Active Delivery</Link>
+              <Link to="/partner/history" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Deliveries & Earnings</Link>
             </>
           )}
           {currentUser?.role === 'ADMIN' && (
             <>
-              <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800">Admin Dashboard</Link>
-              <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800">Users</Link>
-              <Link to="/admin/partners" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800">Partners</Link>
-              <Link to="/admin/requests" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800">Fuel Requests</Link>
-              <Link to="/admin/settings" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800">Settings</Link>
+              <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Admin Dashboard</Link>
+              <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Users</Link>
+              <Link to="/admin/partners" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Partners</Link>
+              <Link to="/admin/requests" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Fuel Requests</Link>
+              <Link to="/admin/settings" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Settings</Link>
             </>
           )}
         </div>

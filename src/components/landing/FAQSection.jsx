@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const FAQS = [
   {
@@ -28,13 +28,13 @@ export default function FAQSection() {
   const [openIdx, setOpenIdx] = useState(0);
 
   return (
-    <section className="py-20 bg-slate-900/60 border-t border-slate-800">
+    <section className="py-20 bg-white dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800 transition-colors">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center space-y-3 mb-12">
-          <span className="text-xs font-bold text-brand-400 uppercase tracking-widest px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20">
+          <span className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-500/10 border border-brand-200 dark:border-brand-500/20">
             Frequently Asked Questions
           </span>
-          <h2 className="text-3xl font-extrabold text-white font-['Plus_Jakarta_Sans']">
+          <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white font-['Plus_Jakarta_Sans']">
             Clear Answers for Stranded Motorists
           </h2>
         </div>
@@ -45,22 +45,22 @@ export default function FAQSection() {
             return (
               <div 
                 key={faq.q}
-                className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden transition"
+                className="rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden transition shadow-sm"
               >
                 <button
                   type="button"
                   onClick={() => setOpenIdx(isOpen ? -1 : idx)}
-                  className="w-full p-5 text-left flex items-center justify-between text-sm sm:text-base font-bold text-white hover:text-brand-400 transition"
+                  className="w-full p-5 text-left flex items-center justify-between text-sm sm:text-base font-bold text-slate-900 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 transition"
                 >
                   <span>{faq.q}</span>
                   {isOpen ? (
-                    <ChevronUp className="w-5 h-5 text-brand-400 shrink-0" />
+                    <ChevronUp className="w-5 h-5 text-brand-600 dark:text-brand-400 shrink-0" />
                   ) : (
                     <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />
                   )}
                 </button>
                 {isOpen && (
-                  <div className="px-5 pb-5 text-xs sm:text-sm text-slate-400 leading-relaxed border-t border-slate-800/80 pt-3">
+                  <div className="px-5 pb-5 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t border-slate-200/80 dark:border-slate-800/80 pt-3">
                     {faq.a}
                   </div>
                 )}

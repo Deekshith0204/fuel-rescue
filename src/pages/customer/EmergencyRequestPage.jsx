@@ -43,42 +43,62 @@ export default function EmergencyRequestPage() {
   });
 
   const [submitting, setSubmitting] = useState(false);
-  const [confirmedSafety, setConfirmedSafety] = useState(true);
-
-  // Live Admin Pricing & Distance State
   const [pricing, setPricing] = useState(DEFAULT_PRICING);
   const [estimatedKm, setEstimatedKm] = useState(4.2);
 
-  // Subscribe to real-time pricing updates set by Admin
+  // Load live pricing from settings or default
   useEffect(() => {
-    const unsub = pricingService.subscribeToPricing((livePricing) => {
-      setPricing(livePricing);
-    });
-    return () => unsub && unsub();
-  }, []);
-
-  // Compute proximity distance whenever location changes
-  useEffect(() => {
-    async function calculateProximity() {
+    async function loadPricingAndLocation() {
       try {
-        const partners = await dispatchService.findNearestPartners(location.lat, location.lng);
-        if (partners && partners.length > 0) {
-          setEstimatedKm(Number(partners[0].distanceKm.toFixed(1)));
-        } else {
-          // Approximate distance to central emergency hub
-          const dist = calculateHaversineDistance(location.lat, location.lng, 12.9716, 77.5946);
-          setEstimatedKm(Math.max(1.5, Number(dist.toFixed(1))));
-        }
+        const livePricing = await pricingService.getPricingConfig();
+        if (livePricing) setPricing(livePricing);
       } catch (e) {
-        setEstimatedKm(4.2);
+        console.warn("Using default pricing", e);
+      }
+
+      // Check if user has a default vehicle in garage or saved location
+      if (currentUser?.garage && currentUser.garage.length > 0) {
+        const defaultVehicle = currentUser.garage.find(v => v.isDefault) || currentUser.garage[0];
+        if (defaultVehicle) {
+          if (defaultVehicle.fuelType) setFuelType(defaultVehicle.fuelType);
+          if (defaultVehicle.type) setVehicleType(defaultVehicle.type);
+        }
+      }
+
+      if (currentUser?.savedLocations && currentUser.savedLocations.length > 0) {
+        const defaultLoc = currentUser.savedLocations.find(l => l.isDefault) || currentUser.savedLocations[0];
+        if (defaultLoc && defaultLoc.address) {
+          setLocation(prev => ({
+            ...prev,
+            address: defaultLoc.address,
+            lat: defaultLoc.lat || prev.lat,
+            lng: defaultLoc.lng || prev.lng
+          }));
+        }
+      }
+
+      // Estimate distance to nearest partner
+      try {
+        const partners = await dispatchService.getAvailablePartners();
+        if (partners && partners.length > 0) {
+          const nearest = partners.reduce((prev, curr) => {
+            const d1 = calculateHaversineDistance(location.lat, location.lng, prev.latitude || 12.97, prev.longitude || 77.59);
+            const d2 = calculateHaversineDistance(location.lat, location.lng, curr.latitude || 12.97, curr.longitude || 77.59);
+            return d1 < d2 ? prev : curr;
+          });
+          const dist = calculateHaversineDistance(location.lat, location.lng, nearest.latitude || 12.97, nearest.longitude || 77.59);
+          setEstimatedKm(Number(dist.toFixed(1)) || 3.5);
+        }
+      } catch (err) {
+        console.warn("Nearest partner distance calculation fallback:", err);
       }
     }
-    calculateProximity();
-  }, [location.lat, location.lng]);
+    loadPricingAndLocation();
+  }, [currentUser]);
 
-  const effectiveQty = quantity === 'custom' ? (parseFloat(customQty) || 1) : quantity;
+  const effectiveQty = quantity === 'custom' ? (parseFloat(customQty) || 5) : quantity;
 
-  // Dynamic Fare calculation using Admin-set rates and per-km transit
+  // Dynamic Fare calculation
   const fare = pricingService.calculateFare(pricing, {
     fuelType,
     quantity: effectiveQty,
@@ -117,7 +137,6 @@ export default function EmergencyRequestPage() {
       };
 
       await submitEmergencyRequest(payload);
-      // Navigate directly to live tracking screen
       navigate('/customer/tracking');
     } catch (err) {
       alert("Failed to submit request: " + err.message);
@@ -127,32 +146,32 @@ export default function EmergencyRequestPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-colors">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl">
+        {/* Header Banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 text-xs font-bold uppercase tracking-wider">
+              <span className="px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-200 dark:border-brand-500/20 text-xs font-bold uppercase tracking-wider">
                 Emergency Breakdown Dispatch
               </span>
-              <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              <span className="flex items-center gap-1 text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/20">
                 <Sparkles className="w-3 h-3" />
                 Live Official Rates
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-2 font-['Plus_Jakarta_Sans']">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-2 font-['Plus_Jakarta_Sans']">
               Request Emergency Fuel
             </h1>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
               Authorized mobile roadside dispensing unit dispatched to your exact GPS coordinates
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700/60 text-right">
-              <span className="text-[10px] text-slate-400 block font-medium">Estimated Fare</span>
-              <span className="text-2xl font-black text-brand-400 font-mono">₹{fare.totalAmount.toFixed(2)}</span>
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 text-right">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Estimated Fare</span>
+              <span className="text-2xl font-black text-brand-600 dark:text-brand-400 font-mono">₹{fare.totalAmount.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -160,16 +179,16 @@ export default function EmergencyRequestPage() {
         {/* Request Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Section 1: Fuel Selection */}
-          <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <Fuel className="w-4 h-4 text-brand-400" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                <Fuel className="w-4 h-4 text-brand-500 dark:text-brand-400" />
                 <span>1. Select Fuel Type & Quantity</span>
               </h3>
-              <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                <span>Petrol: <b className="text-white">₹{pricing.petrolPricePerLitre}/L</b></span>
+              <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                <span>Petrol: <b className="text-slate-800 dark:text-white font-bold">₹{pricing.petrolPricePerLitre}/L</b></span>
                 <span>•</span>
-                <span>Diesel: <b className="text-white">₹{pricing.dieselPricePerLitre}/L</b></span>
+                <span>Diesel: <b className="text-slate-800 dark:text-white font-bold">₹{pricing.dieselPricePerLitre}/L</b></span>
               </div>
             </div>
 
@@ -179,17 +198,17 @@ export default function EmergencyRequestPage() {
                 onClick={() => setFuelType('Petrol')}
                 className={`p-4 rounded-2xl border text-left transition flex items-center justify-between ${
                   fuelType === 'Petrol'
-                    ? 'bg-brand-500/20 border-brand-500 text-white shadow-glow'
-                    : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800'
+                    ? 'bg-orange-50 dark:bg-brand-500/20 border-brand-500 text-slate-900 dark:text-white shadow-sm ring-1 ring-brand-500'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <div>
-                  <span className="font-bold text-base block">Petrol (Gasoline)</span>
-                  <span className="text-xs text-slate-400 mt-0.5 block">Standard Octane • 2-Wheelers & Petrol Cars</span>
+                  <span className="font-bold text-base block text-slate-900 dark:text-white">Petrol (Gasoline)</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 block">Standard Octane • 2-Wheelers & Cars</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm font-extrabold text-brand-400">₹{pricing.petrolPricePerLitre.toFixed(2)}</span>
-                  <span className="text-[10px] text-slate-400 block">/ Litre</span>
+                  <span className="text-base font-extrabold text-brand-600 dark:text-brand-400 font-mono">₹{pricing.petrolPricePerLitre.toFixed(2)}</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">/ Litre</span>
                 </div>
               </button>
 
@@ -198,24 +217,24 @@ export default function EmergencyRequestPage() {
                 onClick={() => setFuelType('Diesel')}
                 className={`p-4 rounded-2xl border text-left transition flex items-center justify-between ${
                   fuelType === 'Diesel'
-                    ? 'bg-blue-500/20 border-blue-500 text-white shadow-glow'
-                    : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800'
+                    ? 'bg-blue-50 dark:bg-blue-500/20 border-blue-500 text-slate-900 dark:text-white shadow-sm ring-1 ring-blue-500'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <div>
-                  <span className="font-bold text-base block">Diesel (Automotive)</span>
-                  <span className="text-xs text-slate-400 mt-0.5 block">High Cetane • SUVs, Heavy Vehicles & Vans</span>
+                  <span className="font-bold text-base block text-slate-900 dark:text-white">Diesel (Automotive)</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 block">High Cetane • SUVs, Heavy Vehicles & Vans</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm font-extrabold text-blue-400">₹{pricing.dieselPricePerLitre.toFixed(2)}</span>
-                  <span className="text-[10px] text-slate-400 block">/ Litre</span>
+                  <span className="text-base font-extrabold text-blue-600 dark:text-blue-400 font-mono">₹{pricing.dieselPricePerLitre.toFixed(2)}</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">/ Litre</span>
                 </div>
               </button>
             </div>
 
             {/* Quantity Selector */}
             <div className="pt-2">
-              <label className="text-xs font-semibold text-slate-300 block mb-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">
                 Emergency Safe Top-Up Quantity:
               </label>
               <div className="grid grid-cols-4 gap-2">
@@ -226,8 +245,8 @@ export default function EmergencyRequestPage() {
                     onClick={() => setQuantity(qty)}
                     className={`py-3 rounded-xl border text-center transition font-bold text-sm ${
                       quantity === qty
-                        ? 'bg-brand-500 text-white border-brand-500 shadow-glow'
-                        : 'bg-slate-800/70 border-slate-700 text-slate-300 hover:bg-slate-800'
+                        ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
+                        : 'bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
                     {qty} Litre{qty > 1 ? 's' : ''}
@@ -238,8 +257,8 @@ export default function EmergencyRequestPage() {
                   onClick={() => setQuantity('custom')}
                   className={`py-3 rounded-xl border text-center transition font-bold text-sm ${
                     quantity === 'custom'
-                      ? 'bg-brand-500 text-white border-brand-500 shadow-glow'
-                      : 'bg-slate-800/70 border-slate-700 text-slate-300 hover:bg-slate-800'
+                      ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
+                      : 'bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   Custom
@@ -256,10 +275,10 @@ export default function EmergencyRequestPage() {
                     value={customQty}
                     onChange={(e) => setCustomQty(e.target.value)}
                     placeholder="Enter litres (e.g. 3, 4, max 10L for roadside emergency)"
-                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
                     required
                   />
-                  <span className="text-[11px] text-slate-400 mt-1 block">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">
                     Under roadside emergency safety norms, max mobile top-up is 10 litres to safely reach the nearest fuel station.
                   </span>
                 </div>
@@ -268,9 +287,9 @@ export default function EmergencyRequestPage() {
           </div>
 
           {/* Section 2: Vehicle & Context */}
-          <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Car className="w-4 h-4 text-brand-400" />
+          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <Car className="w-4 h-4 text-brand-500 dark:text-brand-400" />
               <span>2. Vehicle Information</span>
             </h3>
 
@@ -280,10 +299,10 @@ export default function EmergencyRequestPage() {
                   key={v}
                   type="button"
                   onClick={() => setVehicleType(v)}
-                  className={`p-3 rounded-xl border text-xs text-center font-semibold transition ${
+                  className={`p-3 rounded-xl border text-xs text-center font-bold transition ${
                     vehicleType === v
-                      ? 'bg-brand-500/20 border-brand-500 text-brand-300'
-                      : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:bg-slate-800'
+                      ? 'bg-orange-50 dark:bg-brand-500/20 border-brand-500 text-brand-700 dark:text-brand-300'
+                      : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   {v}
@@ -292,7 +311,7 @@ export default function EmergencyRequestPage() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
                 Optional Message for Partner (e.g., Highway km marker, car colour, hazard lights)
               </label>
               <textarea
@@ -300,25 +319,25 @@ export default function EmergencyRequestPage() {
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="White Swift stranded on left shoulder near toll booth, hazard lights flashing..."
                 rows="2"
-                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
           </div>
 
-          {/* Section 3: Google Map Location Picker */}
-          <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+          {/* Section 3: Location Picker */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-brand-400" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-brand-500 dark:text-brand-400" />
                 <span>3. Pinpoint Breakdown Location</span>
               </h3>
-              <div className="flex items-center gap-1.5 text-xs text-brand-400 font-semibold bg-brand-500/10 px-2.5 py-1 rounded-full border border-brand-500/20">
+              <div className="flex items-center gap-1.5 text-xs text-brand-700 dark:text-brand-400 font-bold bg-orange-50 dark:bg-brand-500/10 px-2.5 py-1 rounded-full border border-orange-200 dark:border-brand-500/20">
                 <Navigation className="w-3.5 h-3.5" />
                 <span>Est. Transit: ~{fare.distanceKm} km</span>
               </div>
             </div>
 
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Use GPS location, search your highway / street landmark via Google Places Autocomplete, or drag the marker to your precise vehicle position.
             </p>
 
@@ -330,46 +349,46 @@ export default function EmergencyRequestPage() {
           </div>
 
           {/* Section 4: Upfront Price Breakdown */}
-          <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-3">
+          <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                 Emergency Dispatch Fare Summary
               </h4>
-              <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/20">
                 Admin Verified Live Tariffs
               </span>
             </div>
 
             <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between text-slate-300">
+              <div className="flex justify-between text-slate-600 dark:text-slate-300">
                 <span>{effectiveQty} Litre{effectiveQty > 1 ? 's' : ''} {fuelType} (@ ₹{fare.pricePerLitre.toFixed(2)}/L):</span>
-                <span className="font-semibold text-white">₹{fare.fuelSubtotal.toFixed(2)}</span>
+                <span className="font-bold text-slate-900 dark:text-white">₹{fare.fuelSubtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-slate-300">
+              <div className="flex justify-between text-slate-600 dark:text-slate-300">
                 <span>Base Rapid Dispatch Fee:</span>
-                <span className="font-semibold text-white">₹{fare.baseDeliveryFee.toFixed(2)}</span>
+                <span className="font-bold text-slate-900 dark:text-white">₹{fare.baseDeliveryFee.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-slate-300">
+              <div className="flex justify-between text-slate-600 dark:text-slate-300">
                 <span>Distance Transit Charge ({fare.distanceKm} km @ ₹{fare.deliveryFeePerKm.toFixed(2)}/km):</span>
-                <span className="font-semibold text-white">₹{fare.distanceCharge.toFixed(2)}</span>
+                <span className="font-bold text-slate-900 dark:text-white">₹{fare.distanceCharge.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-slate-300">
+              <div className="flex justify-between text-slate-600 dark:text-slate-300">
                 <span>Emergency Roadside Safety Escort:</span>
-                <span className="font-semibold text-white">₹{fare.emergencySurge.toFixed(2)}</span>
+                <span className="font-bold text-slate-900 dark:text-white">₹{fare.emergencySurge.toFixed(2)}</span>
               </div>
-              <div className="pt-2 border-t border-slate-800 flex justify-between text-sm">
-                <span className="font-bold text-white">Total Amount Due:</span>
-                <span className="font-extrabold text-brand-400 text-base">₹{fare.totalAmount.toFixed(2)}</span>
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between text-sm">
+                <span className="font-bold text-slate-900 dark:text-white">Total Amount Due:</span>
+                <span className="font-extrabold text-brand-600 dark:text-brand-400 text-base font-mono">₹{fare.totalAmount.toFixed(2)}</span>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200/90 text-[11px] flex items-center gap-2 mt-2">
-              <Info className="w-4 h-4 text-amber-400 shrink-0" />
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-900 dark:text-amber-200/90 text-[11px] flex items-center gap-2 mt-2">
+              <Info className="w-4 h-4 text-amber-500 shrink-0" />
               <span>Payment is collected upon arrival via UPI, Card, or Cash on delivery.</span>
             </div>
           </div>
 
-          {/* Submit Emergency Request Button */}
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={submitting}
