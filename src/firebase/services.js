@@ -306,18 +306,24 @@ export const requestService = {
   },
 
   getAll: async () => {
+    let cloudReqs = [];
     if (isFirebaseConfigured && db) {
       try {
         const q = query(collection(db, 'fuelRequests'), orderBy('createdAt', 'desc'));
         const snap = await withTimeout(getDocs(q), 2500);
         if (!snap.empty) {
-          return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          cloudReqs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         }
       } catch (e) {
         // Fall back seamlessly to mockStore without hanging
       }
     }
-    return mockStore.getRequests();
+    const localReqs = mockStore.getRequests();
+    const map = new Map();
+    cloudReqs.forEach(r => { if (r && r.id) map.set(r.id, r); });
+    localReqs.forEach(r => { if (r && r.id) map.set(r.id, r); });
+    const merged = Array.from(map.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    return merged.length > 0 ? merged : localReqs;
   },
 
   getById: async (id) => {
@@ -392,20 +398,55 @@ export const requestService = {
 // ----------------------------------------------------
 export const partnerService = {
   getAll: async () => {
+    const deletedPartnerIds = mockStore.getDeletedPartnerIds().map(d => String(d).toLowerCase().trim());
+    let cloudPartners = [];
     if (isFirebaseConfigured && db) {
       try {
         const snap = await withTimeout(getDocs(collection(db, 'partners')), 2500);
         if (!snap.empty) {
-          return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          cloudPartners = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Firestore partners fetch error, using local storage:", e);
+      }
     }
-    return mockStore.getPartners();
+
+    const localPartners = mockStore.getPartners();
+
+    // Map by partner id, userId, and email to merge properly
+    const partnerMap = new Map();
+    cloudPartners.forEach(p => {
+      const key = String(p.id || '').toLowerCase().trim();
+      if (key) partnerMap.set(key, p);
+    });
+    // Local additions & modifications override cloud cache
+    localPartners.forEach(p => {
+      const key = String(p.id || '').toLowerCase().trim();
+      if (key) partnerMap.set(key, p);
+    });
+
+    const uniquePartners = Array.from(new Set(partnerMap.values()));
+
+    // Filter strictly by tombstones
+    const finalPartners = uniquePartners.filter(p => {
+      if (!p) return false;
+      const cleanId = String(p.id || '').toLowerCase().trim();
+      const cleanUserId = String(p.userId || '').toLowerCase().trim();
+      const cleanEmail = String(p.email || '').toLowerCase().trim();
+      return !deletedPartnerIds.includes(cleanId) && 
+             (!cleanUserId || !deletedPartnerIds.includes(cleanUserId)) &&
+             (!cleanEmail || !deletedPartnerIds.includes(cleanEmail));
+    });
+
+    mockStore.setPartners(finalPartners);
+    return finalPartners;
   },
 
   getByUserId: async (userId) => {
     const partners = await partnerService.getAll();
-    return partners.find(p => p.userId === userId || p.id === userId) || null;
+    if (!userId) return null;
+    const clean = String(userId).toLowerCase().trim();
+    return partners.find(p => String(p.userId || '').toLowerCase().trim() === clean || String(p.id || '').toLowerCase().trim() === clean) || null;
   },
 
   updateAvailability: async (partnerId, availability) => {
@@ -461,36 +502,88 @@ export const partnerService = {
   },
 
   addPartner: async (partnerData) => {
+    const partnerId = partnerData.id || `part_${Date.now()}`;
+    const cleanEmail = String(partnerData.email || '').trim().toLowerCase();
+
+    // Ensure partner is also registered as a system user so it shows everywhere
+    let linkedUserId = partnerData.userId;
+    if (!linkedUserId && cleanEmail) {
+      let existingUser = mockStore.getUserById(cleanEmail);
+      if (!existingUser) {
+        existingUser = {
+          id: `usr_${Date.now()}`,
+          name: partnerData.name || "Delivery Partner",
+          email: cleanEmail,
+          phone: partnerData.phone || "",
+          role: 'DELIVERY_PARTNER',
+          isActive: true,
+          adminAccessApproved: false,
+          createdAt: new Date().toISOString()
+        };
+        mockStore.saveUser(existingUser);
+        if (isFirebaseConfigured && db) {
+          setDoc(doc(db, 'users', existingUser.id), existingUser).catch(() => {});
+        }
+      }
+      linkedUserId = existingUser.id;
+    }
+
     const newPartner = {
       ...partnerData,
-      id: `part_${Date.now()}`,
-      availability: 'ONLINE',
-      verificationStatus: 'VERIFIED',
-      rating: 5.0,
-      totalDeliveries: 0,
-      todayDeliveries: 0,
-      todayEarnings: 0,
-      totalEarnings: 0,
-      createdAt: new Date().toISOString()
+      id: partnerId,
+      userId: linkedUserId || partnerId,
+      availability: partnerData.availability || 'ONLINE',
+      verificationStatus: partnerData.verificationStatus || 'VERIFIED',
+      rating: partnerData.rating || 5.0,
+      totalDeliveries: partnerData.totalDeliveries || 0,
+      todayDeliveries: partnerData.todayDeliveries || 0,
+      todayEarnings: partnerData.todayEarnings || 0,
+      totalEarnings: partnerData.totalEarnings || 0,
+      createdAt: partnerData.createdAt || new Date().toISOString()
     };
+
+    // 1. Immediately save to mockStore so local storage holds it across refreshes
+    mockStore.savePartner(newPartner);
+
+    // 2. Persist to Cloud Firestore in background
     if (isFirebaseConfigured && db) {
       try {
         await withTimeout(setDoc(doc(db, 'partners', newPartner.id), newPartner), 2500);
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Firestore partner write timed out, kept in persistent local store:", e);
+      }
     }
-    mockStore.savePartner(newPartner);
+
     return newPartner;
   },
 
-  deletePartner: async (partnerId) => {
+  deletePartner: async (partnerId, userId = null) => {
+    const cleanTarget = String(partnerId || '').trim();
+    // 1. Find existing partner to capture all IDs
+    const existing = mockStore.getPartners().find(p => 
+      p.id === cleanTarget || p.userId === cleanTarget || (p.email && p.email.toLowerCase() === cleanTarget.toLowerCase())
+    );
+    const targetUserId = userId || existing?.userId;
+    const targetEmail = existing?.email;
+
+    // 2. Add tombstones and delete locally
+    mockStore.deletePartner(cleanTarget);
+    if (targetUserId) mockStore.deletePartner(targetUserId);
+    if (targetEmail) mockStore.deletePartner(targetEmail);
+
+    // 3. Delete from Cloud Firestore if configured
     if (isFirebaseConfigured && db) {
       try {
-        await withTimeout(deleteDoc(doc(db, 'partners', partnerId)), 2500);
+        await withTimeout(deleteDoc(doc(db, 'partners', cleanTarget)), 2500);
       } catch (e) {
         console.warn("Firestore delete partner error:", e);
       }
+      if (targetUserId && targetUserId !== cleanTarget) {
+        try {
+          await withTimeout(deleteDoc(doc(db, 'partners', targetUserId)), 2000);
+        } catch (e) {}
+      }
     }
-    mockStore.deletePartner(partnerId);
     return true;
   }
 };
@@ -515,15 +608,21 @@ export const orderService = {
   },
 
   getAll: async () => {
+    let cloudOrders = [];
     if (isFirebaseConfigured && db) {
       try {
         const snap = await withTimeout(getDocs(collection(db, 'orders')), 2500);
         if (!snap.empty) {
-          return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          cloudOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         }
       } catch (e) {}
     }
-    return mockStore.getOrders();
+    const localOrders = mockStore.getOrders();
+    const map = new Map();
+    cloudOrders.forEach(o => { if (o && o.id) map.set(o.id, o); });
+    localOrders.forEach(o => { if (o && o.id) map.set(o.id, o); });
+    const merged = Array.from(map.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    return merged.length > 0 ? merged : localOrders;
   },
 
   getByUser: async (userId) => {
@@ -599,11 +698,13 @@ export const serviceAreaService = {
 // ----------------------------------------------------
 export const adminService = {
   getUsers: async () => {
+    const deletedUserIds = mockStore.getDeletedUserIds().map(d => String(d).toLowerCase().trim());
+    let cloudUsers = [];
     if (isFirebaseConfigured && db) {
       try {
         const snap = await withTimeout(getDocs(collection(db, 'users')), 2500);
         if (!snap.empty) {
-          const list = snap.docs.map(d => {
+          cloudUsers = snap.docs.map(d => {
             const data = d.data() || {};
             return {
               id: d.id,
@@ -613,14 +714,60 @@ export const adminService = {
               role: data.role || "CUSTOMER"
             };
           });
-          if (Array.isArray(list) && list.length > 0) return list;
         }
       } catch (e) {
         console.warn("Firestore getUsers error, using local fallback:", e);
       }
     }
-    const fallback = mockStore.getUsers();
-    return Array.isArray(fallback) && fallback.length > 0 ? fallback : SAMPLE_USERS;
+
+    const localUsers = mockStore.getUsers();
+
+    // Combine cloud and local users by id/email, giving local priority
+    const userMap = new Map();
+    cloudUsers.forEach(u => {
+      const key = String(u.id || u.uid || u.email || '').toLowerCase().trim();
+      if (key) userMap.set(key, u);
+      if (u.email) userMap.set(String(u.email).toLowerCase().trim(), u);
+    });
+    localUsers.forEach(u => {
+      const key = String(u.id || u.uid || u.email || '').toLowerCase().trim();
+      if (key) userMap.set(key, u);
+      if (u.email) userMap.set(String(u.email).toLowerCase().trim(), u);
+    });
+
+    const uniqueUsers = Array.from(new Set(userMap.values()));
+
+    // Filter out any user matching tombstoned deleted user IDs or emails
+    let finalList = uniqueUsers.filter(u => {
+      if (!u) return false;
+      const cleanId = String(u.id || u.uid || '').toLowerCase().trim();
+      const cleanEmail = String(u.email || '').toLowerCase().trim();
+      // Main admin is protected from deletion
+      if (cleanEmail === MAIN_ADMIN_EMAIL.toLowerCase()) return true;
+      return !deletedUserIds.includes(cleanId) && !deletedUserIds.includes(cleanEmail);
+    });
+
+    // Guarantee Main Admin is present
+    const hasMainAdmin = finalList.some(u => String(u.email || '').toLowerCase().trim() === MAIN_ADMIN_EMAIL.toLowerCase());
+    if (!hasMainAdmin) {
+      const mainAdmin = {
+        id: "usr_admin_001",
+        uid: "usr_admin_001",
+        name: "Main Administrator",
+        email: MAIN_ADMIN_EMAIL,
+        phone: "+91 99000 11223",
+        role: "ADMIN",
+        isMainAdmin: true,
+        adminAccessApproved: true,
+        isActive: true,
+        createdAt: new Date().toISOString()
+      };
+      finalList.unshift(mainAdmin);
+      mockStore.saveUser(mainAdmin);
+    }
+
+    mockStore.setUsers(finalList);
+    return finalList;
   },
 
   toggleUserStatus: async (userId, isActive) => {
@@ -671,11 +818,19 @@ export const adminService = {
   deleteUser: async (userId, currentAdminEmail) => {
     // 1. Identify user to protect Main Admin
     const user = mockStore.getUserById(userId);
-    if (user?.email?.toLowerCase() === MAIN_ADMIN_EMAIL.toLowerCase()) {
+    const userEmail = String(user?.email || '').toLowerCase().trim();
+    if (userEmail === MAIN_ADMIN_EMAIL.toLowerCase() || String(userId).toLowerCase().trim() === MAIN_ADMIN_EMAIL.toLowerCase()) {
       throw new Error("The Root Main Administrator account cannot be deleted.");
     }
 
-    // 2. Delete from Cloud Firestore if configured
+    // 2. Add tombstones and delete from mockStore immediately
+    mockStore.deleteUser(userId, userEmail);
+    mockStore.deletePartner(userId);
+    if (userEmail) {
+      mockStore.deletePartner(userEmail);
+    }
+
+    // 3. Delete from Cloud Firestore if configured
     if (isFirebaseConfigured && db) {
       try {
         await withTimeout(deleteDoc(doc(db, 'users', userId)), 3000);
@@ -687,11 +842,25 @@ export const adminService = {
       try {
         await withTimeout(deleteDoc(doc(db, 'partners', userId)), 2000);
       } catch (e) {}
-    }
 
-    // 3. Delete from mockStore
-    mockStore.deleteUser(userId);
-    mockStore.deletePartner(userId);
+      try {
+        const q = query(collection(db, 'partners'), where('userId', '==', userId));
+        const snap = await withTimeout(getDocs(q), 2000);
+        if (!snap.empty) {
+          snap.docs.forEach(d => deleteDoc(d.ref).catch(() => {}));
+        }
+      } catch (e) {}
+
+      if (userEmail) {
+        try {
+          const q = query(collection(db, 'partners'), where('email', '==', userEmail));
+          const snap = await withTimeout(getDocs(q), 2000);
+          if (!snap.empty) {
+            snap.docs.forEach(d => deleteDoc(d.ref).catch(() => {}));
+          }
+        } catch (e) {}
+      }
+    }
 
     return { success: true, userId };
   },

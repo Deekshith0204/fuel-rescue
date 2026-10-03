@@ -54,8 +54,8 @@ export default function PartnerManagementPage() {
       return;
     }
     try {
-      await partnerService.deletePartner(partner.id);
-      setPartners(prev => prev.filter(p => p.id !== partner.id));
+      await partnerService.deletePartner(partner.id, partner.userId);
+      setPartners(prev => prev.filter(p => p.id !== partner.id && (!partner.userId || p.userId !== partner.userId)));
     } catch (err) {
       alert("Failed to delete partner: " + err.message);
     }
@@ -63,22 +63,26 @@ export default function PartnerManagementPage() {
 
   const handleAddPartner = async (e) => {
     e.preventDefault();
-    const newP = await partnerService.addPartner({
-      name,
-      phone,
-      email,
-      vehicleNumber,
-      vehicleType,
-      serviceArea,
-      latitude: 12.9716,
-      longitude: 77.5946
-    });
-    setPartners(prev => [newP, ...prev]);
-    setAddModalOpen(false);
-    setName('');
-    setPhone('');
-    setEmail('');
-    setVehicleNumber('');
+    try {
+      const newP = await partnerService.addPartner({
+        name,
+        phone,
+        email,
+        vehicleNumber,
+        vehicleType,
+        serviceArea,
+        latitude: 12.9716,
+        longitude: 77.5946
+      });
+      setPartners(prev => [newP, ...prev]);
+      setAddModalOpen(false);
+      setName('');
+      setPhone('');
+      setEmail('');
+      setVehicleNumber('');
+    } catch (err) {
+      alert("Failed to add partner: " + err.message);
+    }
   };
 
   const filteredPartners = partners.filter(p => 

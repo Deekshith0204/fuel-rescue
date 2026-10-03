@@ -169,7 +169,7 @@ export default function UserManagementPage() {
     setDeleteLoading(true);
     try {
       await adminService.deleteUser(userToDelete.id, currentUser?.email);
-      setUsers(prev => (Array.isArray(prev) ? prev : []).filter(u => u.id !== userToDelete.id));
+      setUsers(prev => (Array.isArray(prev) ? prev : []).filter(u => u.id !== userToDelete.id && (!userToDelete.email || String(u.email || '').toLowerCase() !== String(userToDelete.email).toLowerCase())));
       if (selectedUser?.id === userToDelete.id) {
         setSelectedUser(null);
       }

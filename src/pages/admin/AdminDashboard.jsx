@@ -34,13 +34,13 @@ const COLORS = ['#f97316', '#3b82f6', '#10b981', '#ef4444', '#a855f7'];
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
-    totalUsers: 6,
-    activePartners: 2,
-    todayRequests: 5,
-    completedRequests: 14,
-    pendingRequests: 1,
-    cancelledRequests: 1,
-    totalRevenue: 18450.00
+    totalUsers: 0,
+    activePartners: 0,
+    todayRequests: 0,
+    completedRequests: 0,
+    pendingRequests: 0,
+    cancelledRequests: 0,
+    totalRevenue: 0
   });
 
   const [loading, setLoading] = useState(true);
@@ -92,13 +92,13 @@ export default function AdminDashboard() {
         const rev = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
 
         setStats({
-          totalUsers: users.length || 6,
-          activePartners: activeP || 2,
-          todayRequests: reqs.length || 5,
-          completedRequests: comp || 14,
-          pendingRequests: pend || 1,
-          cancelledRequests: canc || 1,
-          totalRevenue: rev || 18450.00
+          totalUsers: users.length,
+          activePartners: activeP,
+          todayRequests: reqs.length,
+          completedRequests: comp,
+          pendingRequests: pend,
+          cancelledRequests: canc,
+          totalRevenue: rev
         });
       } catch (e) {
         console.warn("Stats load failed", e);
