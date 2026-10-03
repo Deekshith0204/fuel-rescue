@@ -20,7 +20,8 @@ const STORAGE_KEYS = {
   PRICING: 'fuelrescue_platform_pricing',
   CURRENT_USER: 'fuelrescue_active_session',
   DELETED_USERS: 'fuelrescue_deleted_users',
-  DELETED_PARTNERS: 'fuelrescue_deleted_partners'
+  DELETED_PARTNERS: 'fuelrescue_deleted_partners',
+  DELETED_REQUESTS: 'fuelrescue_deleted_requests'
 };
 
 function ensureInitialized() {
@@ -94,6 +95,7 @@ export const mockStore = {
     localStorage.setItem(STORAGE_KEYS.SERVICE_AREAS, JSON.stringify(SAMPLE_SERVICE_AREAS));
     localStorage.removeItem(STORAGE_KEYS.DELETED_USERS);
     localStorage.removeItem(STORAGE_KEYS.DELETED_PARTNERS);
+    localStorage.removeItem(STORAGE_KEYS.DELETED_REQUESTS);
     localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
     return true;
   },
@@ -120,6 +122,15 @@ export const mockStore = {
       if (clean && !list.includes(clean)) list.push(clean);
     });
     setLocal(STORAGE_KEYS.DELETED_PARTNERS, list);
+  },
+  getDeletedRequestIds: () => {
+    return getLocal(STORAGE_KEYS.DELETED_REQUESTS, []);
+  },
+  addDeletedRequestId: (requestId) => {
+    const list = getLocal(STORAGE_KEYS.DELETED_REQUESTS, []);
+    const cleanId = String(requestId || '').trim().toLowerCase();
+    if (cleanId && !list.includes(cleanId)) list.push(cleanId);
+    setLocal(STORAGE_KEYS.DELETED_REQUESTS, list);
   },
 
   // Users
@@ -252,25 +263,42 @@ export const mockStore = {
   },
 
   // Requests
-  getRequests: () => getLocal(STORAGE_KEYS.REQUESTS, SAMPLE_REQUESTS),
+  getRequests: () => {
+    const data = getLocal(STORAGE_KEYS.REQUESTS, SAMPLE_REQUESTS);
+    const deleted = mockStore.getDeletedRequestIds().map(d => String(d).toLowerCase());
+    return Array.isArray(data)
+      ? data.filter(r => r && !deleted.includes(String(r.id || '').toLowerCase()))
+      : [];
+  },
   getRequestById: (id) => {
-    const requests = getLocal(STORAGE_KEYS.REQUESTS, SAMPLE_REQUESTS);
-    return requests.find(r => r.id === id) || null;
+    const requests = mockStore.getRequests();
+    if (!id) return null;
+    const clean = String(id).toLowerCase();
+    return requests.find(r => String(r.id || '').toLowerCase() === clean) || null;
   },
   saveRequest: (req) => {
     const requests = getLocal(STORAGE_KEYS.REQUESTS, SAMPLE_REQUESTS);
-    const index = requests.findIndex(r => r.id === req.id);
+    const cleanId = String(req.id || '').toLowerCase();
+    const index = requests.findIndex(r => String(r.id || '').toLowerCase() === cleanId);
     if (index >= 0) {
       requests[index] = { ...requests[index], ...req };
     } else {
       requests.unshift(req);
     }
+    // Remove from deleted list
+    const deleted = mockStore.getDeletedRequestIds().filter(d => String(d).toLowerCase() !== cleanId);
+    setLocal(STORAGE_KEYS.DELETED_REQUESTS, deleted);
     setLocal(STORAGE_KEYS.REQUESTS, requests);
     return req;
   },
+  setRequests: (requestsList) => {
+    setLocal(STORAGE_KEYS.REQUESTS, requestsList);
+  },
   deleteRequest: (reqId) => {
+    const cleanId = String(reqId || '').trim().toLowerCase();
+    mockStore.addDeletedRequestId(cleanId);
     let requests = getLocal(STORAGE_KEYS.REQUESTS, SAMPLE_REQUESTS);
-    requests = requests.filter(r => r.id !== reqId);
+    requests = requests.filter(r => String(r.id || '').toLowerCase() !== cleanId);
     setLocal(STORAGE_KEYS.REQUESTS, requests);
     return true;
   },

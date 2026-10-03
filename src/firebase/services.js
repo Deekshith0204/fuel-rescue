@@ -306,6 +306,7 @@ export const requestService = {
   },
 
   getAll: async () => {
+    const deletedRequestIds = mockStore.getDeletedRequestIds().map(d => String(d).toLowerCase().trim());
     let cloudReqs = [];
     if (isFirebaseConfigured && db) {
       try {
@@ -322,8 +323,29 @@ export const requestService = {
     const map = new Map();
     cloudReqs.forEach(r => { if (r && r.id) map.set(r.id, r); });
     localReqs.forEach(r => { if (r && r.id) map.set(r.id, r); });
-    const merged = Array.from(map.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-    return merged.length > 0 ? merged : localReqs;
+    const merged = Array.from(map.values())
+      .filter(r => r && !deletedRequestIds.includes(String(r.id || '').toLowerCase().trim()))
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    
+    mockStore.setRequests(merged);
+    return merged;
+  },
+
+  delete: async (requestId) => {
+    const cleanId = String(requestId || '').trim();
+    mockStore.deleteRequest(cleanId);
+    if (isFirebaseConfigured && db) {
+      try {
+        await withTimeout(deleteDoc(doc(db, 'fuelRequests', cleanId)), 2500);
+      } catch (e) {
+        console.warn("Firestore delete request error:", e);
+      }
+    }
+    return true;
+  },
+
+  deleteRequest: async (requestId) => {
+    return requestService.delete(requestId);
   },
 
   getById: async (id) => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Fuel, Clock, MapPin, Receipt, CheckCircle2, ChevronRight, Filter } from 'lucide-react';
+import { Fuel, Clock, MapPin, Receipt, CheckCircle2, ChevronRight, Filter, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { requestService, orderService } from '../../firebase/services';
 import { invoiceService } from '../../services/invoiceService';
@@ -26,6 +26,20 @@ export default function OrderHistoryPage() {
     }
     loadData();
   }, [currentUser]);
+
+  const handleDeleteOrder = async (id, e) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm("Are you sure you want to remove this fuel request record from your history?")) return;
+    try {
+      await requestService.delete(id);
+      setRequests(prev => prev.filter(r => r.id !== id));
+      if (selectedReceipt?.id === id) {
+        setSelectedReceipt(null);
+      }
+    } catch (err) {
+      alert("Failed to delete request: " + err.message);
+    }
+  };
 
   const filteredRequests = requests.filter(r => {
     if (filter === 'ALL') return true;
@@ -112,14 +126,24 @@ export default function OrderHistoryPage() {
                   <span className="block text-[10px] text-emerald-400 font-medium">Payment Settled</span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedReceipt(req)}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition"
-                >
-                  <Receipt className="w-3.5 h-3.5" />
-                  <span>Invoice</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedReceipt(req)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition"
+                  >
+                    <Receipt className="w-3.5 h-3.5" />
+                    <span>Invoice</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteOrder(req.id, e)}
+                    className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-600 hover:text-white text-rose-400 border border-rose-500/20 transition"
+                    title="Delete Record"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}

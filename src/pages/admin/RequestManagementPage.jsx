@@ -7,13 +7,17 @@ import {
   XCircle, 
   Search, 
   Filter, 
-  ExternalLink,
-  X,
-  Truck,
-  User,
-  ShieldCheck
+  ExternalLink, 
+  X, 
+  Truck, 
+  User, 
+  ShieldCheck,
+  Trash2,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { requestService } from '../../firebase/services';
+import { useNotifications } from '../../context/NotificationContext';
 import GoogleMapTracker from '../../components/common/GoogleMapTracker';
 
 const STATUS_FILTERS = [
@@ -28,10 +32,13 @@ const STATUS_FILTERS = [
 ];
 
 export default function RequestManagementPage() {
+  const { addNotification } = useNotifications();
   const [requests, setRequests] = useState([]);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [selectedReq, setSelectedReq] = useState(null);
+  const [reqToDelete, setReqToDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,6 +54,33 @@ export default function RequestManagementPage() {
     }
     loadRequests();
   }, []);
+
+  const handleDeleteClick = (req, e) => {
+    if (e) e.stopPropagation();
+    setReqToDelete(req);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!reqToDelete) return;
+    setDeleteLoading(true);
+    try {
+      await requestService.delete(reqToDelete.id);
+      setRequests(prev => prev.filter(r => r.id !== reqToDelete.id));
+      if (selectedReq?.id === reqToDelete.id) {
+        setSelectedReq(null);
+      }
+      addNotification({
+        type: 'emergency',
+        title: 'Emergency Request Deleted',
+        message: `Fuel emergency request #${reqToDelete.id.slice(-6)} has been permanently removed.`
+      });
+      setReqToDelete(null);
+    } catch (err) {
+      alert("Failed to delete fuel request: " + err.message);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const filteredRequests = requests.filter(r => {
     const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter;
@@ -115,7 +149,7 @@ export default function RequestManagementPage() {
                   <th className="pb-3 font-semibold">Assigned Responder</th>
                   <th className="pb-3 font-semibold">Status</th>
                   <th className="pb-3 font-semibold">Timestamp</th>
-                  <th className="pb-3 font-semibold text-right">Preview</th>
+                  <th className="pb-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
@@ -149,13 +183,23 @@ export default function RequestManagementPage() {
                       {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </td>
                     <td className="py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedReq(req)}
-                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-brand-500 hover:text-white text-brand-400 font-bold text-xs transition"
-                      >
-                        Inspect
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedReq(req)}
+                          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-brand-500 hover:text-white text-brand-400 font-bold text-xs transition"
+                        >
+                          Inspect
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteClick(req, e)}
+                          className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-600 hover:text-white text-rose-400 border border-rose-500/20 transition group"
+                          title="Delete Fuel Request"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -174,7 +218,7 @@ export default function RequestManagementPage() {
                 <span className="text-[10px] font-bold text-brand-400 uppercase">Emergency Telemetry Inspector</span>
                 <h3 className="text-base font-bold text-white">Request #{selectedReq.id}</h3>
               </div>
-              <button onClick={() => setSelectedReq(null)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setSelectedReq(null)} className="text-slate-400 hover:text-white p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -228,6 +272,90 @@ export default function RequestManagementPage() {
                 "{selectedReq.message}"
               </div>
             )}
+
+            {/* Modal Actions Footer */}
+            <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
+              <p className="text-[11px] text-slate-500">
+                Administrative Record Control
+              </p>
+              <button
+                type="button"
+                onClick={() => handleDeleteClick(selectedReq)}
+                className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-600 hover:text-white text-rose-400 border border-rose-500/20 font-bold text-xs transition flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Request</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {reqToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-md bg-slate-900 border border-rose-500/30 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Delete Fuel Request</h3>
+                <p className="text-xs text-rose-400/80">Permanent removal from platform</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Request ID:</span>
+                <span className="font-mono font-bold text-white">#{reqToDelete.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Customer:</span>
+                <span className="font-bold text-white">{reqToDelete.customerName || "Customer"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Fuel & Quantity:</span>
+                <span className="font-bold text-brand-400">{reqToDelete.quantity}L {reqToDelete.fuelType}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Status:</span>
+                <span className="font-bold text-slate-300">{reqToDelete.status}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Are you sure you want to permanently delete this fuel emergency request? This will remove the record across the platform and survive browser refresh.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setReqToDelete(null)}
+                disabled={deleteLoading}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleteLoading}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-lg shadow-rose-900/30"
+              >
+                {deleteLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Confirm Delete</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
