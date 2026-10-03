@@ -278,6 +278,32 @@ export const authService = {
 };
 
 // ----------------------------------------------------
+// USER PROFILE SERVICE
+// ----------------------------------------------------
+export const userService = {
+  updateProfile: async (userId, data) => {
+    const existing = mockStore.getUserById(userId) || mockStore.getSession() || {};
+    const updated = {
+      ...existing,
+      ...data,
+      id: userId || existing.id,
+      updatedAt: new Date().toISOString()
+    };
+    mockStore.saveUser(updated);
+    mockStore.setSession(updated);
+
+    if (isFirebaseConfigured && db && userId) {
+      try {
+        await withTimeout(setDoc(doc(db, 'users', userId), updated, { merge: true }), 2500);
+      } catch (e) {
+        console.warn("Firestore user profile sync warning:", e);
+      }
+    }
+    return updated;
+  }
+};
+
+// ----------------------------------------------------
 // FUEL REQUEST SERVICE
 // ----------------------------------------------------
 export const requestService = {

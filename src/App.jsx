@@ -18,6 +18,9 @@ import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 
+// Common Profile Page
+import ProfilePage from './pages/profile/ProfilePage';
+
 // Customer Pages
 import CustomerDashboard from './pages/customer/CustomerDashboard';
 import EmergencyRequestPage from './pages/customer/EmergencyRequestPage';
@@ -54,6 +57,24 @@ export default function App() {
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+                  {/* Universal Profile Route for Customer, Partner & Admin */}
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute allowedRoles={['CUSTOMER', 'DELIVERY_PARTNER', 'ADMIN']}>
+                        <ProfilePage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/customer/profile"
+                    element={
+                      <ProtectedRoute allowedRoles={['CUSTOMER', 'ADMIN']}>
+                        <ProfilePage />
+                      </ProtectedRoute>
+                    }
+                  />
 
                   {/* Customer Protected Routes */}
                   <Route

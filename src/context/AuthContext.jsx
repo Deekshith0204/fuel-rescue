@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../firebase/services';
+import { authService, userService } from '../firebase/services';
 import { mockStore } from '../firebase/mockStore';
 
 const AuthContext = createContext();
@@ -46,6 +46,14 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const updateUserProfile = async (updatedFields) => {
+    if (!currentUser) return null;
+    const targetId = currentUser.id || currentUser.uid;
+    const updated = await userService.updateProfile(targetId, updatedFields);
+    setCurrentUser(updated);
+    return updated;
+  };
+
   const logout = async () => {
     setLoading(true);
     try {
@@ -66,6 +74,7 @@ export function AuthProvider({ children }) {
         authError,
         login,
         register,
+        updateUserProfile,
         logout,
         isRole,
         isAuthenticated: Boolean(currentUser)

@@ -195,22 +195,35 @@ export default function Navbar() {
 
           {/* Right Header Action Items */}
           <div className="flex items-center gap-3">
-            {/* User Account / Role Badge (Read-only, authentic role from auth/database) */}
+            {/* User Account / Role Badge & Profile Link */}
             {currentUser && (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-800 border border-slate-700 text-slate-200">
-                  <span className={`w-2 h-2 rounded-full ${
+              <Link
+                to="/profile"
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 hover:border-brand-500/60 hover:bg-slate-800 transition group"
+                title="View & Edit Profile"
+              >
+                <div className="relative">
+                  <div className="w-7 h-7 rounded-full bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center text-xs font-bold text-white group-hover:border-brand-500 transition">
+                    {currentUser?.photoURL ? (
+                      <img src={currentUser.photoURL} alt={currentUser.name || 'User'} className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-4 h-4 text-slate-300 group-hover:text-brand-400" />
+                    )}
+                  </div>
+                  <span className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-slate-900 ${
                     currentUser?.role === 'ADMIN' ? 'bg-purple-500' :
                     currentUser?.role === 'DELIVERY_PARTNER' ? 'bg-blue-500' : 'bg-brand-500'
                   }`}></span>
-                  <span className="font-bold">
+                </div>
+                <div className="hidden sm:flex flex-col text-left">
+                  <span className="text-xs text-slate-200 font-bold group-hover:text-brand-400 transition truncate max-w-[110px]">
+                    {currentUser?.name || currentUser?.email?.split('@')[0]}
+                  </span>
+                  <span className="text-[10px] text-slate-400 leading-none">
                     {currentUser?.role === 'ADMIN' ? 'Admin' : currentUser?.role === 'DELIVERY_PARTNER' ? 'Partner' : 'Customer'}
                   </span>
                 </div>
-                <span className="text-xs text-slate-300 font-medium hidden lg:inline truncate max-w-[130px]">
-                  {currentUser?.name || currentUser?.email?.split('@')[0]}
-                </span>
-              </div>
+              </Link>
             )}
 
             {/* Notification Bell */}
@@ -257,7 +270,14 @@ export default function Navbar() {
 
             {/* User Profile / Logout */}
             {currentUser ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Link
+                  to="/profile"
+                  className="p-2 text-slate-400 hover:text-brand-400 hover:bg-slate-800 rounded-lg transition"
+                  title="My Profile & Garage"
+                >
+                  <User className="w-5 h-5" />
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
@@ -291,6 +311,16 @@ export default function Navbar() {
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden border-b border-slate-800 bg-slate-900 px-4 pt-2 pb-4 space-y-2">
+          {currentUser && (
+            <Link
+              to="/profile"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-semibold text-brand-400 bg-brand-500/10 border border-brand-500/20 hover:bg-brand-500/20 transition mb-2"
+            >
+              <User className="w-4 h-4" />
+              <span>My Profile & Garage</span>
+            </Link>
+          )}
           {currentUser?.role === 'CUSTOMER' && (
             <>
               <Link to="/customer" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800">Customer Dashboard</Link>

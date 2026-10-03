@@ -12,7 +12,9 @@ import {
   ArrowRight,
   PhoneCall,
   History,
-  LifeBuoy
+  LifeBuoy,
+  User,
+  Car
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useEmergencyRequest } from '../../context/EmergencyRequestContext';
@@ -61,8 +63,15 @@ export default function CustomerDashboard() {
           </p>
         </div>
 
-        {/* Prominent Emergency Action Button */}
-        <div className="z-10 shrink-0">
+        {/* Action Buttons */}
+        <div className="z-10 shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <Link
+            to="/profile"
+            className="px-5 py-4 rounded-2xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2.5 backdrop-blur-sm"
+          >
+            <User className="w-5 h-5 text-brand-400" />
+            <span>My Profile & Garage</span>
+          </Link>
           <Link
             to="/customer/emergency"
             className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-black text-base shadow-glow hover:scale-105 transition-all flex items-center justify-center gap-3 emergency-pulse"
@@ -128,7 +137,7 @@ export default function CustomerDashboard() {
       )}
 
       {/* Quick Action Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 flex items-start gap-4">
           <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-brand-400 flex items-center justify-center shrink-0">
             <Fuel className="w-6 h-6" />
@@ -138,6 +147,20 @@ export default function CustomerDashboard() {
             <p className="text-xs text-slate-400 mt-1">1L to 5L Petrol or Diesel dispatched with safety funnel kit.</p>
             <Link to="/customer/emergency" className="inline-flex items-center gap-1 text-xs font-bold text-brand-400 hover:underline mt-3">
               <span>Order Now</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+
+        <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 flex items-start gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center shrink-0">
+            <Car className="w-6 h-6" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white">My Vehicle Garage</h4>
+            <p className="text-xs text-slate-400 mt-1">Manage vehicles, fuel preferences, and emergency SOS contacts.</p>
+            <Link to="/profile" className="inline-flex items-center gap-1 text-xs font-bold text-brand-400 hover:underline mt-3">
+              <span>Manage Profile</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
